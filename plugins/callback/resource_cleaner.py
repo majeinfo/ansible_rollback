@@ -1,4 +1,8 @@
 # Only for Python3
+'''
+A rollback playbook SHOULD NOT create another rollback playbook because it SHOULD NOT create any resources !
+'''
+
 __metaclass__ = type
 
 DOCUMENTATION = '''
@@ -20,6 +24,7 @@ DOCUMENTATION = '''
         ini:
           - section: resource_cleaner
             key: playbook_output_path
+
 '''
 
 import sys

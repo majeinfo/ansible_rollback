@@ -4,6 +4,22 @@
 import sys
 from .cleaner_base import CleanerBase
 
+def aws_check_state_present(func):
+    '''
+    Decorator that ensures the resource is created.
+    There is no rollback to do if it is not !
+    '''
+    def _check_state_present(self, module_name, result):
+        module_args = result._result.get('invocation').get('module_args')
+        state = module_args.get('state')
+        if state != 'present':
+            self.callback._debug(f"module {module_name} does not create any new resource")
+            return None
+
+        return func(self, module_name, result)
+
+    return _check_state_present
+
 
 class AWSCleaner(CleanerBase):
     def __init__(self, callback):
@@ -12,6 +28,7 @@ class AWSCleaner(CleanerBase):
 
         # List of handled actions
         self.aws_actions = {
+            'amazon.aws.ec2_ami': self._ec2_ami,
             'amazon.aws.ec2_instance': self._ec2_instance,
             'amazon.aws.ec2_vol': self._ec2_vol,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
@@ -28,6 +45,20 @@ class AWSCleaner(CleanerBase):
 
         return None
 
+    # Called upon ec2 AMI creation
+    @aws_check_state_present
+    def _ec2_ami(self, module_name, result):
+        image_id = self._to_text(result._result.get('image_id'))
+        self.callback._debug(f"created AMI: {image_id}")
+
+        # Generate amazon.aws.ec2_ami delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'image_id': image_id,
+            }
+        })
+
     # Called upon ec2 instance creation
     def _ec2_instance(self, module_name, result):
         changed_ids = result._result.get('changed_ids')
@@ -42,17 +73,13 @@ class AWSCleaner(CleanerBase):
         return ({
             module_name: {
                 'state': 'terminated',
-                'instance_ids': list(instance_ids)
+                'instance_ids': list(instance_ids),
             }
         })
 
     # Called upon Volume creation
+    @aws_check_state_present
     def _ec2_vol(self, module_name, result):
-        module_args = result._result.get('invocation').get('module_args')
-        state = module_args.get('state')
-        if state != 'present':
-            return None
-
         volume = result._result.get('volume')
         volume_id = self._to_text(volume.get('id'))
         self.callback._debug(f"volume {volume_id}")
@@ -66,12 +93,8 @@ class AWSCleaner(CleanerBase):
         })
 
     # Called upon VPC creation
+    @aws_check_state_present
     def _ec2_vpc_net(self, module_name, result):
-        module_args = result._result.get('invocation').get('module_args')
-        state = module_args.get('state')
-        if state != 'present':
-            return None
-
         vpc = result._result.get('vpc')
         vpc_id = self._to_text(vpc.get('id'))
         self.callback._debug(f"vpc {vpc_id}")
@@ -80,17 +103,13 @@ class AWSCleaner(CleanerBase):
         return ({
             module_name: {
                 'state': 'absent',
-                'vpc_id': vpc_id
+                'vpc_id': vpc_id,
             }
         })
 
     # Called upon VPC subnet creation
+    @aws_check_state_present
     def _ec2_vpc_subnet(self, module_name, result):
-        module_args = result._result.get('invocation').get('module_args')
-        state = module_args.get('state')
-        if state != 'present':
-            return None
-
         subnet = result._result.get('subnet')
         subnet_id = self._to_text(subnet.get('id'))
         vpc_id = self._to_text(subnet.get('vpc_id'))
@@ -107,12 +126,8 @@ class AWSCleaner(CleanerBase):
         })
 
     # Called upon Security Group creation
+    @aws_check_state_present
     def _ec2_security_group(self, module_name, result):
-        module_args = result._result.get('invocation').get('module_args')
-        state = module_args.get('state')
-        if state != 'present':
-            return None
-
         group_id = result._result.get('group_id')
         self.callback._debug(f"security_group {group_id}")
 
@@ -125,12 +140,9 @@ class AWSCleaner(CleanerBase):
         })
 
     # Called upon EIP creation
+    @aws_check_state_present
     def _ec2_eip(self, module_name, result):
         module_args = result._result.get('invocation').get('module_args')
-        state = module_args.get('state')
-        if state != 'present':
-            return None
-
         in_vpc = module_args.get('in_vpc')
         allocation_id = result._result.get('allocation_id')
         public_ip = result._result.get('public_ip')

@@ -1,0 +1,16 @@
+- name: Test AMI creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+    - name: Create an AMI
+      amazon.aws.ec2_ami:
+        name: ansible_ami
+        instance_id: "i-0acc3d58dcb476127"
+        state: present
+        region: "{{ region }}"
+
+
