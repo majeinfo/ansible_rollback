@@ -33,6 +33,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_eni': self._ec2_eni,
             'amazon.aws.ec2_instance': self._ec2_instance,
             'amazon.aws.ec2_key': self._ec2_key,
+            'amazon.aws.ec2_tag': self._ec2_tag,
             'amazon.aws.ec2_vol': self._ec2_vol,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
@@ -188,6 +189,24 @@ class AWSCleaner(CleanerBase):
             module_name: {
                 'state': 'absent',
                 'name': self._to_text(key_name),
+            }
+        })
+
+    # Called upon TAG creation
+    @aws_check_state_present
+    def _ec2_tag(self, module_name, result):
+        module_args = result._result.get('invocation').get('module_args')
+        resource = module_args.get('resource')
+        tags = module_args.get('tags')
+        self.callback._debug(f"Tags on resource {resource}")
+
+        # Generate amazon.aws.ec2_eni delete !
+        tag_dict = {self._to_text(key): self._to_text(value) for key, value in tags.items()}
+        return ({
+            module_name: {
+                'state': 'absent',
+                'resource': self._to_text(resource),
+                'tags': tag_dict,
             }
         })
 
