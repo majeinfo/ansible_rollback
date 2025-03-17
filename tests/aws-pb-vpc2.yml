@@ -1,0 +1,30 @@
+- name: Test a VPC and subnet creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: Create a VPC
+      amazon.aws.ec2_vpc_net:
+        name: my_new_vpc
+        cidr_block: "10.10.0.0/16"
+        region: "eu-west-3"
+      register: vpc
+
+    - debug:
+        var: vpc
+
+    - name: Create a Subnet
+      amazon.aws.ec2_vpc_subnet:
+        cidr: "10.10.1.0/24"
+        region: "eu-west-3"
+        vpc_id: "{{ vpc.vpc.id }}"
+        tags: 
+          Name: my_new_subnet
+      register: subnet
+
+    - debug:
+        var: subnet
+
+
+

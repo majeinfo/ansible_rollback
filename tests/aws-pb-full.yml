@@ -1,0 +1,49 @@
+- name: Create multiple resources
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+   - name: Create a VPC
+     amazon.aws.ec2_vpc_net:
+       name: my_new_vpc
+       cidr_block: "10.10.0.0/16"
+       region: "{{ region }}"
+     register: vpc
+
+    - name: Create a Subnet
+      amazon.aws.ec2_vpc_subnet:
+        cidr: "10.10.1.0/24"
+        region: "{{ region }}"
+        vpc_id: "{{ vpc.vpc.id }}"
+        tags: 
+          Name: my_new_subnet
+      register: subnet
+
+   - name: Launch instance
+     amazon.aws.ec2_instance:
+         key_name: "formation-paris"
+         security_group: "k8s-etcd-formation"
+         instance_type: "t3.nano"
+         #tags:
+         #  TmpName: "K8S-FORMATION"
+         instance_role: "Formation-K8s"
+         image_id: "ami-0918d360198af7fcf"
+         wait: true
+         region: "{{ region }}"
+         vpc_subnet_id: "{{ subnet.subnet.id }}"
+         volumes:
+           - device_name: /dev/xvda
+             ebs:
+               volume_size: 10
+               volume_type: gp3
+               delete_on_termination: true
+         count: 1
+         state: running
+         #filters:
+         #  tag:TmpName: "K8S-FORMATION"
+     register: ec2
+
+
