@@ -1,0 +1,17 @@
+- name: Test ENI creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+    - name: Create ENI Interface
+      amazon.aws.ec2_eni:
+        name: rollback_eni
+        private_ip_address: 172.16.1.123
+        subnet_id: subnet-0138a1d159c6f08ac
+        state: present
+        region: "{{ region }}"
+
+

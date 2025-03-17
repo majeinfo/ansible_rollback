@@ -29,12 +29,13 @@ class AWSCleaner(CleanerBase):
         # List of handled actions
         self.aws_actions = {
             'amazon.aws.ec2_ami': self._ec2_ami,
+            'amazon.aws.ec2_eip': self._ec2_eip,
+            'amazon.aws.ec2_eni': self._ec2_eni,
             'amazon.aws.ec2_instance': self._ec2_instance,
             'amazon.aws.ec2_vol': self._ec2_vol,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
-            'amazon.aws.ec2_eip': self._ec2_eip,
         }
 
     # handle an Action
@@ -157,6 +158,21 @@ class AWSCleaner(CleanerBase):
                 'release_on_disassociation': True,
             }
         })
+
+    # Called upon ENI creation
+    @aws_check_state_present
+    def _ec2_eni(self, module_name, result):
+        interface = result._result.get('interface')
+        eni_id = interface.get('id')
+
+        # Generate amazon.aws.ec2_eni delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'eni_id': self._to_text(eni_id),
+            }
+        })
+
 
     # Generate the rollback action
     def _ec2_generate_action(self, action, module_name, result):
