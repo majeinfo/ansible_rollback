@@ -1,4 +1,4 @@
-- name: Test AMI creation
+- name: Test KEY creation
   hosts: localhost
   connection: local
   gather_facts: False
@@ -6,10 +6,9 @@
     region: eu-west-3
 
   tasks:
-    - name: Create an AMI
-      amazon.aws.ec2_ami:
-        name: rollback_ami
-        instance_id: "i-0acc3d58dcb476127"
+    - name: Create a Key pair
+      amazon.aws.ec2_key:
+        name: rollback_key
         state: present
         region: "{{ region }}"
 
