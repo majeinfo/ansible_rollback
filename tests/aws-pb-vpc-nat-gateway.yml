@@ -1,0 +1,16 @@
+- name: Test a VPC NAT Gateway creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+   - name: Create a VPC NAT Gateway
+     amazon.aws.ec2_vpc_nat_gateway:
+       subnet_id: subnet-556c9d18
+       region: "{{ region }}"
+       tags:
+         Name: my-natgw
+
+

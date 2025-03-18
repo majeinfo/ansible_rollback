@@ -39,6 +39,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_vpc_dhcp_option': self._ec2_vpc_dhcp_option,
             'amazon.aws.ec2_vpc_endpoint': self._ec2_vpc_endpoint,
             'amazon.aws.ec2_vpc_igw': self._ec2_vpc_igw,
+            'amazon.aws.ec2_vpc_nat_gateway': self._ec2_vpc_nat_gateway,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
@@ -157,6 +158,44 @@ class AWSCleaner(CleanerBase):
             }
         })
     
+    # Called upon VPC NATGW creation
+    @aws_check_state_present
+    def _ec2_vpc_nat_gateway(self, module_name, result):
+        '''
+        Deleting a NAT GW is more complex: it may be needed
+        to delete dynamically allocated EIP ! That's why this
+        function returns a list of Ansible Playbook actions
+        '''
+        actions = []
+        nat_gateway_id = result._result.get('nat_gateway_id')
+        self.callback._debug(f"nat gateway {nat_gateway_id}")
+
+        # if allocation_id is not se, an EIP will be allocated
+        # TODO: not supported
+        module_args = result._result.get('invocation').get('module_args')
+        allocation_id = module_args.get('allocation_id')
+        if not allocation_id:
+            nat_gw_addrs = result._result.get('nat_gateway_addresses')
+            for eip in nat_gw_addrs:
+                allocation_id = eip['allocation_id']
+                if 'public_ip' not in eip:
+                    self.callback._info(f"public_ip missing for allocated_ip {allocation_id}: this EIP will not be deleted")
+                    continue
+
+                public_ip = eip['public_ip']
+                action = self._ec2_eip_internal(public_ip, in_vpc=True)
+                actions.append(action)
+
+        # Generate amazon.aws.ec2_vpc_nat_gateway delete !
+        actions.append({
+            module_name: {
+                'state': 'absent',
+                'nat_gateway_id': self._to_text(nat_gateway_id),
+            }
+        })
+        #return actions  # list not supported
+        return actions[0]
+    
     # Called upon VPC creation
     @aws_check_state_present
     def _ec2_vpc_net(self, module_name, result):
@@ -213,6 +252,9 @@ class AWSCleaner(CleanerBase):
         public_ip = result._result.get('public_ip')
         self.callback._debug(f"EIP allocation_id {allocation_id}")
 
+        return self._ec2_eip_internal(public_ip, in_vpc)
+
+    def _ec2_eip_internal(self, public_ip, in_vpc):
         # Generate amazon.aws.ec2_eip delete !
         return ({
             module_name: {

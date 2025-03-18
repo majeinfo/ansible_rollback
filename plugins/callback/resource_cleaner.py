@@ -188,15 +188,21 @@ class CallbackModule(CallbackBase):
 
     # Add an action at the head of the list (assume a reverse order)
     def _insert_action(self, action, result, module_name):
+        '''
+        action: can be a single Playook action or a list of actions
+        '''
         self._debug("_insert_action")
         self._debug(action)
         task_name = result._task_fields.get('name')
         # create a new dict to make sure the 'name' key will be the first one at dump time
-        final_action = {
+        final_action_name = {
             'name': "(UNDO) " + str(task_name) if task_name else "empty",
         }
-        final_action |= action
-        self.actions.insert(0, final_action)
+        if type(action) == list:
+            for act in action:
+                self.actions.insert(0, final_action_name | act)
+        else:
+            self.actions.insert(0, final_action_name | action)
 
     # Generate the rollback playbook
     def rollback_playbook(self):
