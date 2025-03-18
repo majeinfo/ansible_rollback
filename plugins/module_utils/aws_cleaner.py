@@ -50,7 +50,7 @@ class AWSCleaner(CleanerBase):
     def handle_action(self, action_name, result):
         if action_name in self.aws_actions:
             if (action := self.aws_actions[action_name](action_name, result)) is not None:
-                return self._ec2_generate_action(action, action_name, result)
+                return self._aws_generate_action(action, action_name, result)
 
         return None
 
@@ -333,7 +333,7 @@ class AWSCleaner(CleanerBase):
         })
 
     # Generate the rollback action
-    def _ec2_generate_action(self, action, module_name, result):
+    def _aws_generate_action(self, action, module_name, result):
         task_name = result._task_fields.get('name')
         # create a new dict to make sure the 'name' key will be the first one at dump time
         final_action = {
