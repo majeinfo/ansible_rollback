@@ -45,6 +45,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
             'amazon.aws.s3_bucket': self._s3_bucket,
+            'amazon.aws.s3_object': self._s3_object,
         }
 
     # handle an Action
@@ -346,6 +347,49 @@ class AWSCleaner(CleanerBase):
                 'name': self._to_text(name),
             }
         })
+
+    # Called upon S3 Object creation
+    def _s3_object(self, module_name, result):
+        '''
+        Many cases according the "mode" parameter:
+        "create": used to create Bucket directories
+        "copy": copy an object stored in another Bucket
+        "put": upload a file
+        '''
+        module_args = result._result.get('invocation').get('module_args')
+        mode = module_args.get('mode')
+        bucket_name = module_args.get("bucket")
+        self.callback._debug(f"S3 object {bucket_name}")
+
+        if mode == "put" or mode == "copy":
+            object_name = module_args.get("object")
+            return ({
+                module_name: {
+                    'mode': 'delobj',
+                    'object': self._to_text(object_name),
+                    'bucket': self._to_text(bucket_name),
+                }
+            })
+
+        if mode == "create":
+            object_name = module_args.get("object")
+            if object_name:
+                # delete object
+                return ({
+                    module_name: {
+                        'mode': 'delobj',
+                        'object': self._to_text(object_name),
+                        'bucket': self._to_text(bucket_name),
+                    }
+                })
+
+            # delete the whole Bucket (must use another module !)
+            return ({
+                'amazon.aws.s3_bucket': {
+                    'state': 'absent',
+                    'bucket': self._to_text(bucket_name),
+                }
+            })
 
     # Generate the rollback action
     def _aws_generate_action(self, action, module_name, result):

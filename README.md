@@ -23,3 +23,35 @@ log_level = debug
 Now, if you run a Playbook, a rollback Playbook will be created
 under the ./rollback directory. This rollback Playbook can then be
 played to delete the resources previously created.
+
+LIMITS AND BUGS:
+
+- amazon.aws.ec2_vpc_nat_gateway: 
+  when creating a NAT Gateway with a dynamically created EIP, the EIP is not deleted on rollback
+
+- amazon.aws.s3_object:
+  when creating a directory in a S3 bucket, it is not deleted when using "mode: delobj" on rollback
+
+SUPPORTED MODULES:
+
+For AWS:
+
+amazon.aws.ec2_ami
+amazon.aws.ec2_eip
+amazon.aws.ec2_eni
+amazon.aws.ec2_instance
+amazon.aws.ec2_key
+amazon.aws.ec2_snapshot
+amazon.aws.ec2_tag
+amazon.aws.ec2_vol
+amazon.aws.ec2_vpc_dhcp_option
+amazon.aws.ec2_vpc_endpoint
+amazon.aws.ec2_vpc_igw
+amazon.aws.ec2_vpc_nat_gateway
+amazon.aws.ec2_vpc_net
+amazon.aws.ec2_vpc_route_table
+amazon.aws.ec2_vpc_subnet
+amazon.aws.ec2_security_group
+amazon.aws.s3_bucket
+amazon.aws.s3_object
+
