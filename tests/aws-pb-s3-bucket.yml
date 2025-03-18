@@ -1,0 +1,15 @@
+- name: Test S3 Bucket creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+    - name: Create a new S3 Bucket
+      amazon.aws.s3_bucket:
+        name: majeinfo-rollback-test
+        state: present
+        region: "{{ region }}"
+
+

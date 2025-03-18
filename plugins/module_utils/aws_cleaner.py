@@ -44,6 +44,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_vpc_route_table': self._ec2_vpc_route_table,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
+            'amazon.aws.s3_bucket': self._s3_bucket,
         }
 
     # handle an Action
@@ -329,6 +330,20 @@ class AWSCleaner(CleanerBase):
                 'state': 'absent',
                 'resource': self._to_text(resource),
                 'tags': tag_dict,
+            }
+        })
+
+    # Called upon S3 Bucket creation
+    @aws_check_state_present
+    def _s3_bucket(self, module_name, result):
+        name = result._result.get('name')
+        self.callback._debug(f"S3 bucket {name}")
+
+        # Generate amazon.aws.s3_bucket delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'name': self._to_text(name),
             }
         })
 
