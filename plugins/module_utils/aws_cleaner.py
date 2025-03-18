@@ -37,6 +37,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_tag': self._ec2_tag,
             'amazon.aws.ec2_vol': self._ec2_vol,
             'amazon.aws.ec2_vpc_dhcp_option': self._ec2_vpc_dhcp_option,
+            'amazon.aws.ec2_vpc_endpoint': self._ec2_vpc_endpoint,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
@@ -122,6 +123,20 @@ class AWSCleaner(CleanerBase):
             module_name: {
                 'state': 'absent',
                 'dhcp_options_id': self._to_text(dhcp_options_id),
+            }
+        })
+    
+    # Called upon VPC endpoint creation
+    @aws_check_state_present
+    def _ec2_vpc_endpoint(self, module_name, result):
+        vpc_endpoint_id = result._result.get('result').get('vpc_endpoint_id')
+        self.callback._debug(f"vpc endpoint {vpc_endpoint_id}")
+
+        # Generate amazon.aws.ec2_vpc_endpoint delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'vpc_endpoint_id': self._to_text(vpc_endpoint_id),
             }
         })
     

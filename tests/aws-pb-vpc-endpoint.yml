@@ -1,0 +1,20 @@
+- name: Test a VPC endpoint creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+   - name: Create a VPC Endpoint
+     amazon.aws.ec2_vpc_endpoint:
+       service: com.amazonaws.eu-west-3.ec2
+       vpc_id: vpc-f34cd89a
+       vpc_endpoint_type: Interface
+       #vpc_endpoint_subnets:
+       #  - subnet-556c9d18
+       tags:
+         Name: my_endpoint
+       region: "{{ region }}"
+
+
