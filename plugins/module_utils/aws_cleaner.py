@@ -38,6 +38,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_vol': self._ec2_vol,
             'amazon.aws.ec2_vpc_dhcp_option': self._ec2_vpc_dhcp_option,
             'amazon.aws.ec2_vpc_endpoint': self._ec2_vpc_endpoint,
+            'amazon.aws.ec2_vpc_igw': self._ec2_vpc_igw,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
@@ -137,6 +138,22 @@ class AWSCleaner(CleanerBase):
             module_name: {
                 'state': 'absent',
                 'vpc_endpoint_id': self._to_text(vpc_endpoint_id),
+            }
+        })
+    
+    # Called upon VPC igw creation
+    @aws_check_state_present
+    def _ec2_vpc_igw(self, module_name, result):
+        gateway_id = result._result.get('gateway_id')
+        vpc_id = result._result.get('vpc_id')
+        self.callback._debug(f"vpc igw {gateway_id}")
+
+        # Generate amazon.aws.ec2_vpc_igw delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                #'gateway_id': self._to_text(gateway_id),
+                'vpc_id': self._to_text(vpc_id),
             }
         })
     

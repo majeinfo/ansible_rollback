@@ -1,0 +1,16 @@
+- name: Test a VPC IGW creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+   - name: Create a VPC IGW
+     amazon.aws.ec2_vpc_igw:
+       vpc_id: vpc-0b4ee34813b3eb05f
+       region: "{{ region }}"
+       tags:
+         Name: my-igw
+
+
