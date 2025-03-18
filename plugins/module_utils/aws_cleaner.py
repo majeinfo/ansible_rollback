@@ -36,6 +36,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_snapshot': self._ec2_snapshot,
             'amazon.aws.ec2_tag': self._ec2_tag,
             'amazon.aws.ec2_vol': self._ec2_vol,
+            'amazon.aws.ec2_vpc_dhcp_option': self._ec2_vpc_dhcp_option,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
@@ -110,6 +111,20 @@ class AWSCleaner(CleanerBase):
             }
         })
 
+    # Called upon VPC DHCP option creation
+    @aws_check_state_present
+    def _ec2_vpc_dhcp_option(self, module_name, result):
+        dhcp_options_id = result._result.get('dhcp_options_id')
+        self.callback._debug(f"dhcp options {dhcp_options_id}")
+
+        # Generate amazon.aws.ec2_vpc_dhcp_option delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'dhcp_options_id': self._to_text(dhcp_options_id),
+            }
+        })
+    
     # Called upon VPC creation
     @aws_check_state_present
     def _ec2_vpc_net(self, module_name, result):
