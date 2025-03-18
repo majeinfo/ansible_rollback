@@ -41,6 +41,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_vpc_igw': self._ec2_vpc_igw,
             'amazon.aws.ec2_vpc_nat_gateway': self._ec2_vpc_nat_gateway,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
+            'amazon.aws.ec2_vpc_route_table': self._ec2_vpc_route_table,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
             'amazon.aws.ec2_security_group': self._ec2_security_group,
         }
@@ -196,6 +197,23 @@ class AWSCleaner(CleanerBase):
         #return actions  # list not supported
         return actions[0]
     
+    # Called upon VPC Route Table creation
+    @aws_check_state_present
+    def _ec2_vpc_route_table(self, module_name, result):
+        route_table = result._result.get('route_table')
+        route_table_id = route_table.get('route_table_id')
+        self.callback._debug(f"route table {route_table_id}")
+
+        # Generate amazon.aws.ec2_vpc_route_table delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                #'vpc_id': self._to_text(vpc_id),
+                'route_table_id': self._to_text(route_table_id),
+                'lookup': 'id',
+            }
+        })
+
     # Called upon VPC creation
     @aws_check_state_present
     def _ec2_vpc_net(self, module_name, result):

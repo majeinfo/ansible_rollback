@@ -1,0 +1,17 @@
+- name: Test a VPC Route Table creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+   - name: Create a VPC Route Table
+     amazon.aws.ec2_vpc_route_table:
+       vpc_id: vpc-f34cd89a
+       gateway_id: None
+       region: "{{ region }}"
+       tags:
+         Name: my-route-table
+
+
