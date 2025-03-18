@@ -33,6 +33,7 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_eni': self._ec2_eni,
             'amazon.aws.ec2_instance': self._ec2_instance,
             'amazon.aws.ec2_key': self._ec2_key,
+            'amazon.aws.ec2_snapshot': self._ec2_snapshot,
             'amazon.aws.ec2_tag': self._ec2_tag,
             'amazon.aws.ec2_vol': self._ec2_vol,
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
@@ -51,14 +52,14 @@ class AWSCleaner(CleanerBase):
     # Called upon ec2 AMI creation
     @aws_check_state_present
     def _ec2_ami(self, module_name, result):
-        image_id = self._to_text(result._result.get('image_id'))
+        image_id = result._result.get('image_id')
         self.callback._debug(f"created AMI: {image_id}")
 
         # Generate amazon.aws.ec2_ami delete !
         return ({
             module_name: {
                 'state': 'absent',
-                'image_id': image_id,
+                'image_id': self._to_text(image_id),
             }
         })
 
@@ -84,14 +85,28 @@ class AWSCleaner(CleanerBase):
     @aws_check_state_present
     def _ec2_vol(self, module_name, result):
         volume = result._result.get('volume')
-        volume_id = self._to_text(volume.get('id'))
+        volume_id = volume.get('id')
         self.callback._debug(f"volume {volume_id}")
 
         # Generate amazon.aws.ec2_vol delete !
         return ({
             module_name: {
                 'state': 'absent',
-                'id': volume_id,
+                'id': self._to_text(volume_id),
+            }
+        })
+
+    # Called upon Snapshot creation
+    @aws_check_state_present
+    def _ec2_snapshot(self, module_name, result):
+        snapshot_id = result._result.get('snapshot_id')
+        self.callback._debug(f"snapshot {snapshot_id}")
+
+        # Generate amazon.aws.ec2_snapshot delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'snapshot_id': self._to_text(snapshot_id),
             }
         })
 
@@ -99,14 +114,14 @@ class AWSCleaner(CleanerBase):
     @aws_check_state_present
     def _ec2_vpc_net(self, module_name, result):
         vpc = result._result.get('vpc')
-        vpc_id = self._to_text(vpc.get('id'))
+        vpc_id = vpc.get('id')
         self.callback._debug(f"vpc {vpc_id}")
 
         # Generate amazon.aws.ec2_vpc_net delete !
         return ({
             module_name: {
                 'state': 'absent',
-                'vpc_id': vpc_id,
+                'vpc_id': self._to_text(vpc_id),
             }
         })
 
@@ -115,16 +130,16 @@ class AWSCleaner(CleanerBase):
     def _ec2_vpc_subnet(self, module_name, result):
         subnet = result._result.get('subnet')
         subnet_id = self._to_text(subnet.get('id'))
-        vpc_id = self._to_text(subnet.get('vpc_id'))
-        cidr_block = self._to_text(subnet.get('cidr_block'))
+        vpc_id = subnet.get('vpc_id')
+        cidr_block = subnet.get('cidr_block')
         self.callback._debug(f"subnet {subnet_id}")
 
         # Generate amazon.aws.ec2_subnet_net delete !
         return ({
             module_name: {
                 'state': 'absent',
-                'vpc_id': vpc_id,
-                'cidr': cidr_block,
+                'vpc_id': self._to_text(vpc_id),
+                'cidr': self._to_text(cidr_block),
             }
         })
 
