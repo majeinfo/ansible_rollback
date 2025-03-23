@@ -1,4 +1,3 @@
-# Only for Python3
 # Driver for AWS Resources
 
 import sys
@@ -33,6 +32,9 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_eni': self._ec2_eni,
             'amazon.aws.ec2_instance': self._ec2_instance,
             'amazon.aws.ec2_key': self._ec2_key,
+            'amazon.aws.ec2_launch_template': self._ec2_launch_template,
+            'amazon.aws.ec2_placement_group': self._ec2_placement_group,
+            'amazon.aws.ec2_security_group': self._ec2_security_group,
             'amazon.aws.ec2_snapshot': self._ec2_snapshot,
             'amazon.aws.ec2_tag': self._ec2_tag,
             'amazon.aws.ec2_vol': self._ec2_vol,
@@ -43,7 +45,6 @@ class AWSCleaner(CleanerBase):
             'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
             'amazon.aws.ec2_vpc_route_table': self._ec2_vpc_route_table,
             'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
-            'amazon.aws.ec2_security_group': self._ec2_security_group,
             'amazon.aws.s3_bucket': self._s3_bucket,
             'amazon.aws.s3_object': self._s3_object,
         }
@@ -70,6 +71,59 @@ class AWSCleaner(CleanerBase):
             }
         })
 
+    # Called upon EIP creation
+    @aws_check_state_present
+    def _ec2_eip(self, module_name, result):
+        module_args = result._result.get('invocation').get('module_args')
+        in_vpc = module_args.get('in_vpc')
+        allocation_id = result._result.get('allocation_id')
+        public_ip = result._result.get('public_ip')
+        self.callback._debug(f"EIP allocation_id {allocation_id}")
+
+        return self._ec2_eip_internal(public_ip, in_vpc)
+
+    def _ec2_eip_internal(self, public_ip, in_vpc):
+        # Generate amazon.aws.ec2_eip delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'public_ip': self._to_text(public_ip),
+                'in_vpc': in_vpc,
+                'release_on_disassociation': True,
+            }
+        })
+
+    # Called upon ENI creation
+    @aws_check_state_present
+    def _ec2_eni(self, module_name, result):
+        interface = result._result.get('interface')
+        eni_id = interface.get('id')
+        self.callback._debug(f"ENI eni_id {eni_id}")
+
+        # Generate amazon.aws.ec2_eni delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'eni_id': self._to_text(eni_id),
+            }
+        })
+  
+    # Called upon KEY creation
+    @aws_check_state_present
+    def _ec2_key(self, module_name, result):
+        key = result._result.get('key')
+        key_id = key.get('id')
+        key_name = key.get('name')
+        self.callback._debug(f"Key name {key_name}")
+
+        # Generate amazon.aws.ec2_eni delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'name': self._to_text(key_name),
+            }
+        })
+
     # Called upon ec2 instance creation
     def _ec2_instance(self, module_name, result):
         changed_ids = result._result.get('changed_ids')
@@ -88,18 +142,47 @@ class AWSCleaner(CleanerBase):
             }
         })
 
-    # Called upon Volume creation
+    # Called upon Launch Template creation
     @aws_check_state_present
-    def _ec2_vol(self, module_name, result):
-        volume = result._result.get('volume')
-        volume_id = volume.get('id')
-        self.callback._debug(f"volume {volume_id}")
+    def _ec2_launch_template(self, module_name, result):
+        template = result._result.get('template')
+        template_name = template.get('launch_template_name')
+        self.callback._debug(f"Launch Template {template_name}")
 
-        # Generate amazon.aws.ec2_vol delete !
+        # Generate amazon.aws.ec2_launch_template delete !
         return ({
             module_name: {
                 'state': 'absent',
-                'id': self._to_text(volume_id),
+                'template_name': self._to_text(template_name),
+            }
+        })
+
+    # Called upon Placement Group creation
+    @aws_check_state_present
+    def _ec2_placement_group(self, module_name, result):
+        placement_group = result._result.get('placement_group')
+        name = placement_group.get('name')
+        self.callback._debug(f"Placement Group {name}")
+
+        # Generate amazon.aws.ec2_placement_group delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'name': self._to_text(name),
+            }
+        })
+
+    # Called upon Security Group creation
+    @aws_check_state_present
+    def _ec2_security_group(self, module_name, result):
+        group_id = result._result.get('group_id')
+        self.callback._debug(f"security_group {group_id}")
+
+        # Generate amazon.aws.ec2_security_group delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'group_id': self._to_text(group_id),
             }
         })
 
@@ -114,6 +197,39 @@ class AWSCleaner(CleanerBase):
             module_name: {
                 'state': 'absent',
                 'snapshot_id': self._to_text(snapshot_id),
+            }
+        })
+
+    # Called upon TAG creation
+    @aws_check_state_present
+    def _ec2_tag(self, module_name, result):
+        module_args = result._result.get('invocation').get('module_args')
+        resource = module_args.get('resource')
+        tags = module_args.get('tags')
+        self.callback._debug(f"Tags on resource {resource}")
+
+        # Generate amazon.aws.ec2_eni delete !
+        tag_dict = {self._to_text(key): self._to_text(value) for key, value in tags.items()}
+        return ({
+            module_name: {
+                'state': 'absent',
+                'resource': self._to_text(resource),
+                'tags': tag_dict,
+            }
+        })
+
+    # Called upon Volume creation
+    @aws_check_state_present
+    def _ec2_vol(self, module_name, result):
+        volume = result._result.get('volume')
+        volume_id = volume.get('id')
+        self.callback._debug(f"volume {volume_id}")
+
+        # Generate amazon.aws.ec2_vol delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'id': self._to_text(volume_id),
             }
         })
 
@@ -246,91 +362,6 @@ class AWSCleaner(CleanerBase):
                 'state': 'absent',
                 'vpc_id': self._to_text(vpc_id),
                 'cidr': self._to_text(cidr_block),
-            }
-        })
-
-    # Called upon Security Group creation
-    @aws_check_state_present
-    def _ec2_security_group(self, module_name, result):
-        group_id = result._result.get('group_id')
-        self.callback._debug(f"security_group {group_id}")
-
-        # Generate amazon.aws.ec2_security_group delete !
-        return ({
-            module_name: {
-                'state': 'absent',
-                'group_id': self._to_text(group_id),
-            }
-        })
-
-    # Called upon EIP creation
-    @aws_check_state_present
-    def _ec2_eip(self, module_name, result):
-        module_args = result._result.get('invocation').get('module_args')
-        in_vpc = module_args.get('in_vpc')
-        allocation_id = result._result.get('allocation_id')
-        public_ip = result._result.get('public_ip')
-        self.callback._debug(f"EIP allocation_id {allocation_id}")
-
-        return self._ec2_eip_internal(public_ip, in_vpc)
-
-    def _ec2_eip_internal(self, public_ip, in_vpc):
-        # Generate amazon.aws.ec2_eip delete !
-        return ({
-            module_name: {
-                'state': 'absent',
-                'public_ip': self._to_text(public_ip),
-                'in_vpc': in_vpc,
-                'release_on_disassociation': True,
-            }
-        })
-
-    # Called upon ENI creation
-    @aws_check_state_present
-    def _ec2_eni(self, module_name, result):
-        interface = result._result.get('interface')
-        eni_id = interface.get('id')
-        self.callback._debug(f"ENI eni_id {eni_id}")
-
-        # Generate amazon.aws.ec2_eni delete !
-        return ({
-            module_name: {
-                'state': 'absent',
-                'eni_id': self._to_text(eni_id),
-            }
-        })
-  
-    # Called upon KEY creation
-    @aws_check_state_present
-    def _ec2_key(self, module_name, result):
-        key = result._result.get('key')
-        key_id = key.get('id')
-        key_name = key.get('name')
-        self.callback._debug(f"Key name {key_name}")
-
-        # Generate amazon.aws.ec2_eni delete !
-        return ({
-            module_name: {
-                'state': 'absent',
-                'name': self._to_text(key_name),
-            }
-        })
-
-    # Called upon TAG creation
-    @aws_check_state_present
-    def _ec2_tag(self, module_name, result):
-        module_args = result._result.get('invocation').get('module_args')
-        resource = module_args.get('resource')
-        tags = module_args.get('tags')
-        self.callback._debug(f"Tags on resource {resource}")
-
-        # Generate amazon.aws.ec2_eni delete !
-        tag_dict = {self._to_text(key): self._to_text(value) for key, value in tags.items()}
-        return ({
-            module_name: {
-                'state': 'absent',
-                'resource': self._to_text(resource),
-                'tags': tag_dict,
             }
         })
 
