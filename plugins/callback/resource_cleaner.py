@@ -46,6 +46,7 @@ if BASE_DIR not in sys.path:
 
 # Here, add other Cleaner (in the future)
 from plugins.module_utils.aws_cleaner import AWSCleaner
+from plugins.module_utils.gcp_cleaner import GCPCleaner
 
 
 # Parameters and their default values
@@ -73,6 +74,7 @@ class CallbackModule(CallbackBase):
         # List of handled Cloud providers
         self.providers = {
             'amazon.aws': AWSCleaner(self),
+            'google.cloud': GCPCleaner(self),
         }
 
     def set_options(self, task_keys=None, var_options=None, direct=None):
@@ -137,7 +139,6 @@ class CallbackModule(CallbackBase):
     def v2_runner_item_on_ok(self, result):
         self._debug("v2_runner_item_on_ok")
         self._debug(pprint.pformat(result))
-        self._debug(result._result)
         super().v2_runner_item_on_ok(result)
         self._handle_action(result)
 
@@ -150,7 +151,7 @@ class CallbackModule(CallbackBase):
         # AnsibleUnicode to str otherwise the YAML dump will fail...
         action_name = str(result._task_fields.get('action'))
         for key, cleaner in self.providers.items():
-            # Look for a Provide (AWS, GCP, ...)
+            # Look for a Provider (AWS, GCP, ...)
             if action_name.startswith(key):
                 provider = self.providers[key]
                 if (action := provider.handle_action(action_name, result)) is not None:

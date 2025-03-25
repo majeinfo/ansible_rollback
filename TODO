@@ -1,0 +1,4 @@
+* creates the output_path if it does not exist
+* implements new AWS modules
+* implements GCP modules
+* implements Azure modules

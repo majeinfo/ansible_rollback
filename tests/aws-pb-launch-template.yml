@@ -1,0 +1,16 @@
+- name: Test Launch Template creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+    - name: Create a Launch Template
+      amazon.aws.ec2_launch_template:
+        template_name: rollback_launch_tpl
+        image_id: ami-0160e8d70ebc43ee1
+        state: present
+        region: "{{ region }}"
+
+
