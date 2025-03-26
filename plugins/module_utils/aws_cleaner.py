@@ -26,37 +26,9 @@ class AWSCleaner(CleanerBase):
         super().__init__(callback)
         callback._debug("AWSCleaner __init__")
 
-        # List of handled actions
-        self.actions = {
-            'amazon.aws.ec2_ami': self._ec2_ami,
-            'amazon.aws.ec2_eip': self._ec2_eip,
-            'amazon.aws.ec2_eni': self._ec2_eni,
-            'amazon.aws.ec2_instance': self._ec2_instance,
-            'amazon.aws.ec2_key': self._ec2_key,
-            'amazon.aws.ec2_launch_template': self._ec2_launch_template,
-            'amazon.aws.ec2_placement_group': self._ec2_placement_group,
-            'amazon.aws.ec2_security_group': self._ec2_security_group,
-            'amazon.aws.ec2_snapshot': self._ec2_snapshot,
-            'amazon.aws.ec2_spot_instance': self._ec2_spot_instance,
-            'amazon.aws.ec2_tag': self._ec2_tag,
-            'amazon.aws.ec2_transit_gateway': self._ec2_transit_gateway,
-            'amazon.aws.ec2_transit_gateway_vpc_attachment': self._ec2_transit_gateway_vpc_attachment,
-            'amazon.aws.ec2_vol': self._ec2_vol,
-            'amazon.aws.ec2_vpc_dhcp_option': self._ec2_vpc_dhcp_option,
-            'amazon.aws.ec2_vpc_egress_igw': self._ec2_vpc_egress_igw,
-            'amazon.aws.ec2_vpc_endpoint': self._ec2_vpc_endpoint,
-            'amazon.aws.ec2_vpc_igw': self._ec2_vpc_igw,
-            'amazon.aws.ec2_vpc_nat_gateway': self._ec2_vpc_nat_gateway,
-            'amazon.aws.ec2_vpc_nacl': self._ec2_vpc_nacl,
-            'amazon.aws.ec2_vpc_net': self._ec2_vpc_net,
-            'amazon.aws.ec2_vpc_peering': self._ec2_vpc_peering,
-            'amazon.aws.ec2_vpc_route_table': self._ec2_vpc_route_table,
-            'amazon.aws.ec2_vpc_subnet': self._ec2_vpc_subnet,
-            'amazon.aws.ec2_vpc_vgw': self._ec2_vpc_vgw,
-            'amazon.aws.ec2_vpc_vpn': self._ec2_vpc_vpn,
-            'amazon.aws.s3_bucket': self._s3_bucket,
-            'amazon.aws.s3_object': self._s3_object,
-        }
+    # @abstractmethod
+    def get_collection_prefix(self):
+        return "amazon.aws"
 
     # Called upon ec2 AMI creation
     @aws_check_state_present
@@ -305,9 +277,19 @@ class AWSCleaner(CleanerBase):
             }
         })
     
-    @not_supported
+    # Called upon VCP NACL creation
+    @aws_check_state_present
     def _ec2_vpc_nacl(self, module_name, result):
-        pass
+        nacl_id = result._result.get('nacl_id')
+        self.callback._debug(f"vpc nacl {nacl_id}")
+
+        # Generate amazon.aws.ec2_vpc_nacl delete !
+        return ({
+            module_name: {
+                'state': 'absent',
+                'nacl_id': self._to_text(nacl_id),
+            }
+        })
 
     # Called upon VPC NATGW creation
     @aws_check_state_present
@@ -424,6 +406,114 @@ class AWSCleaner(CleanerBase):
     def _ec2_vpc_vpn(self, module_name, result):
         pass
 
+    @not_supported
+    def _elb_application_lb(self, module_name, result):
+        pass
+
+    @not_supported
+    def _elb_classic_lb(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_access_key(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_group(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_instance_profile(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_managed_policy(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_password_policy(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_policy(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_role(self, module_name, result):
+        pass
+
+    @not_supported
+    def _iam_user(self, module_name, result):
+        pass
+
+    @not_supported
+    def _kms_key(self, module_name, result):
+        pass
+
+    @not_supported
+    def _lambda(self, module_name, result):
+        pass
+
+    @not_supported
+    def _lambda_alias(self, module_name, result):
+        pass
+
+    @not_supported
+    def _lambda_event(self, module_name, result):
+        pass
+
+    @not_supported
+    def _lambda_execute(self, module_name, result):
+        pass
+
+    @not_supported
+    def _lambda_layer(self, module_name, result):
+        pass
+
+    @not_supported
+    def _lambda_policy(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_cluster(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_cluster_param_group(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_cluster_snapshot(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_instance(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_instance_param_group(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_instance_snapshot(self, module_name, result):
+        pass
+
+    @not_supported
+    def _rds_option_group(self, module_name, result):
+        pass
+
+    @not_supported
+    def _route53(self, module_name, result):
+        pass
+
+    @not_supported
+    def _route53_key_signing_key(self, module_name, result):
+        pass
+
+    @not_supported
+    def _route53_zone(self, module_name, result):
+        pass
+
     # Called upon S3 Bucket creation
     @aws_check_state_present
     def _s3_bucket(self, module_name, result):
@@ -492,6 +582,7 @@ class AWSCleaner(CleanerBase):
         final_action |= action
 
         module_args = result._result.get('invocation').get('module_args')
+        # TODO: handle secret ! do not write sensitive data
         for key in ('access_key', 'secret_key', 'region', 'aws_config', 'profile'):
             if value := module_args.get(key):
                 final_action[module_name][key] = self._to_text(value)

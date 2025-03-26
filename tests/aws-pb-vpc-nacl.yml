@@ -1,0 +1,15 @@
+- name: Test a VPC NACL creation
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    region: eu-west-3
+
+  tasks:
+   - name: Create a VPC NACL
+     amazon.aws.ec2_vpc_nacl:
+       name: my_new_vpc_nacl
+       vpc_id: vpc-f34cd89a
+       region: '{{ region }}'
+       state: present
+

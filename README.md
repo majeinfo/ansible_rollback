@@ -1,11 +1,11 @@
 # Ansible Collection - majeinfo.resource_cleaner
 
 This collection installs a callback plugins that generates 
-rollback playbook when a playbook generates dynamic resources in the Cloud.
+rollback playbooks when a playbook generates dynamic resources in the Cloud.
 
 In this version, only some of AWS resources types are supported:
 EC2 instance, VPC, VPC Subnet, TAG, AMI, Security Group, EIP, ENI, KEY, Volume
-(see the list os supported modules below)
+(see the list of supported modules below)
 
 In order to enable this Callback Plugin, add the following parameters
 in your ansible.cfg file :
@@ -17,6 +17,7 @@ callback_plugins = majeinfo/resource_cleaner/plugins/callback
 
 [resource_cleaner]
 playbook_output_path = ./rollback
+hide_sensitive_data = false
 log_level = debug
 ```
 

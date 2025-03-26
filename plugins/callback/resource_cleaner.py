@@ -24,7 +24,15 @@ DOCUMENTATION = '''
         ini:
           - section: resource_cleaner
             key: playbook_output_path
-
+      hide_sensitive_data:
+        required: False
+        default: False
+        description: if True, replaces sensitive data by stub variables
+        env:
+          - name: HIDE_SENSITIVE_DATA
+        ini:
+          - section: resource_cleaner
+            key: hide_sensitive_data
 '''
 
 import sys
@@ -51,6 +59,7 @@ from plugins.module_utils.gcp_cleaner import GCPCleaner
 
 # Parameters and their default values
 PLAYBOOK_OUTPUT_PATH = '.'
+HIDE_SENSITIVE_DATA = False
 
 
 class CallbackModule(CallbackBase):
@@ -70,11 +79,12 @@ class CallbackModule(CallbackBase):
         self.playbook_name =  None      # basename
         self.play = None                # current play
         self.actions = []               # recorded actions for a Play
+        self.hide_sensitive_data = HIDE_SENSITIVE_DATA
 
         # List of handled Cloud providers
         self.providers = {
             'amazon.aws': AWSCleaner(self),
-            'google.cloud': GCPCleaner(self),
+            #'google.cloud': GCPCleaner(self),
         }
 
     def set_options(self, task_keys=None, var_options=None, direct=None):
@@ -83,10 +93,19 @@ class CallbackModule(CallbackBase):
         '''
         super().set_options(task_keys=task_keys, var_options=var_options, direct=direct)
 
-        self._debug("set_options")
+        self._debug("set_options called")
         self.playbook_output_path = self.get_option('playbook_output_path')
+        self.hide_sensitive_date = self.get_option('hide_sensitive_data')
 
-        if not os.path.isdir(self.playbook_output_path):
+        # Create the output_path if necessary
+        if not os.path.exists(self.playbook_output_path):
+            try:
+                os.mkdir(self.playbook_output_path)
+            except Exception as e:
+                self._display.warning(f'Cannot create the directory given by playbook_output_path parameter: {self.playbook_output_path}.')
+                self._display.warning(e)
+                self.disabled = True
+        elif not os.path.isdir(self.playbook_output_path):
             self._display.warning(f'The path given by playbook_output_path parameter is not a directory: {self.playbook_output_path}.')
             self.disabled = True
 
@@ -120,7 +139,6 @@ class CallbackModule(CallbackBase):
     def v2_runner_on_ok(self, result):
         self._debug("v2_runner_on_ok")
         self._debug(pprint.pformat(result))
-        self._debug(result._result)
         super().v2_runner_on_ok(result)
 
         self._debug(f"is_changed={result.is_changed()}, "
@@ -154,9 +172,32 @@ class CallbackModule(CallbackBase):
             # Look for a Provider (AWS, GCP, ...)
             if action_name.startswith(key):
                 provider = self.providers[key]
-                if (action := provider.handle_action(action_name, result)) is not None:
-                    self._insert_action(action, result, action_name)
+                try:
+                    if (action := provider.handle_action(action_name, result)) is not None:
+                        self._insert_action(action, result, action_name)
+                except Exception as e:
+                    self._info(f"Action {action_name} has generated an Exception {e}")
+            
+                break
      
+    # Add an action at the head of the list (assume a reverse order)
+    def _insert_action(self, action, result, module_name):
+        '''
+        action: can be a single Playook action or a list of actions
+        '''
+        self._debug("_insert_action")
+        self._debug(action)
+        task_name = result._task_fields.get('name')
+        # create a new dict to make sure the 'name' key will be the first one at dump time
+        final_action_name = {
+            'name': "(UNDO) " + str(task_name) if task_name else "empty",
+        }
+        if type(action) == list:
+            for act in action:
+                self.actions.insert(0, final_action_name | act)
+        else:
+            self.actions.insert(0, final_action_name | action)
+
     # The runner failed
     def v2_runner_on_failed(self, result, ignore_errors=False):
         self._debug("v2_runner_on_failed")
@@ -179,6 +220,10 @@ class CallbackModule(CallbackBase):
 
     # This is the final call
     def v2_playbook_on_stats(self, stats):
+        '''
+        The Playbook has ended, we generate the Rollback Playbook
+        if this Plugin has been initialized without any error.
+        '''
         self._debug("v2_playbook_on_stats")
         super().v2_playbook_on_stats(stats)
         if self.disabled:
@@ -186,24 +231,6 @@ class CallbackModule(CallbackBase):
 
         hosts = sorted(stats.processed.keys())
         self.rollback_playbook()
-
-    # Add an action at the head of the list (assume a reverse order)
-    def _insert_action(self, action, result, module_name):
-        '''
-        action: can be a single Playook action or a list of actions
-        '''
-        self._debug("_insert_action")
-        self._debug(action)
-        task_name = result._task_fields.get('name')
-        # create a new dict to make sure the 'name' key will be the first one at dump time
-        final_action_name = {
-            'name': "(UNDO) " + str(task_name) if task_name else "empty",
-        }
-        if type(action) == list:
-            for act in action:
-                self.actions.insert(0, final_action_name | act)
-        else:
-            self.actions.insert(0, final_action_name | action)
 
     # Generate the rollback playbook
     def rollback_playbook(self):
